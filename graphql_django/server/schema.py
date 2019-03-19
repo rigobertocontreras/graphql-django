@@ -1,4 +1,4 @@
-import importlib
+# import importlib
 import graphene
 
 from graphene_django import DjangoObjectType
@@ -35,42 +35,33 @@ class UserType(DjangoObjectType):
         exclude_fields = ('password')
 
 
-def create_schema(exclude=[], expose_user=True):
-
-    module = importlib.import_module('graphql_django.server.models')
-    app = apps.all_models['server']
-
-    record_schemas = {}
-
-    for content_type in app:
-        if(content_type not in exclude):
-            key = content_type.capitalize()
-            model_class = getattr(module, key)
-            record_schemas[key] = model_class
+def create_schema(app_name, exclude=[], expose_user=True):
 
     fields = {}
     types = []
+    exclude_lower = [x.lower() for x in exclude]
 
-    for key, model_class in record_schemas.items():
+    for key, model_class in apps.get_app_config(app_name).models.items():
+        if key not in exclude_lower:
+            properties = {}
+            properties["model"] = model_class
+            meta = type("Meta", (), properties)
 
-        properties = {}
-        properties["model"] = model_class
-        meta = type("Meta", (), properties)
+            name = key.capitalize() + 'Type'
+            djangoObjectType = type(name, (DjangoObjectType, ), {"Meta": meta})
 
-        typeName = key + 'Type'
-        djangoObjectType = type(typeName, (DjangoObjectType, ), {"Meta": meta})
-
-        types.append(djangoObjectType)
+            types.append(djangoObjectType)
 
     if expose_user:
         types.append(UserType)
 
     for class_type in types:
+
         model_class = class_type._meta.model
         key = model_class._meta.verbose_name
         listName = model_class._meta.verbose_name_plural
-
         list_arguments = {}
+
         for field in model_class._meta.fields:
             if field.unique:
                 list_arguments[field.name] = graphene.String()

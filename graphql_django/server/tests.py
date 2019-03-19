@@ -16,7 +16,7 @@ class PostTestCase(TestCase):
 
 class SchemaTest(TestCase):
     def setUp(self):
-        self.client = Client(create_schema())
+        self.client = Client(create_schema("server"))
 
     def test_schema(self):
         executed = self.client.execute('''{ post(id:"1"){id} }''')
@@ -31,9 +31,17 @@ class SchemaTest(TestCase):
         }})
 
     def test_user_not_included(self):
-        local_client = Client(create_schema(expose_user=False))
+        local_client = Client(create_schema("server", expose_user=False))
         executed = local_client.execute('''{user(id:"1"){id}}''')
         error = {'errors':
                  [{'locations': [{'column': 2, 'line': 1}],
                    'message': 'Cannot query field "user" on type "Query".'}]}
+        self.assertEqual((executed), error)
+
+    def test_lower_excluded(self):
+        local_client = Client(create_schema("server", exclude=["Post"]))
+        executed = local_client.execute('''{post(id:"1"){id}}''')
+        error = {'errors':
+                 [{'locations': [{'column': 2, 'line': 1}],
+                   'message': 'Cannot query field "post" on type "Query".'}]}
         self.assertEqual((executed), error)
