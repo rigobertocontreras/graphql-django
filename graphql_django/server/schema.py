@@ -3,6 +3,7 @@ import graphene
 
 from graphene_django import DjangoObjectType
 from django.apps import apps
+from django.contrib.auth import get_user_model
 
 
 def dump(obj):
@@ -28,30 +29,47 @@ def make_resolver_record(record_name, record_cls):
     return resolver
 
 
-def create_schema(exclude=[]):
+class UserType(DjangoObjectType):
+    class Meta:
+        model = get_user_model()
+        exclude_fields = ('password')
+
+
+def create_schema(exclude=[], expose_user=True):
+
     module = importlib.import_module('graphql_django.server.models')
-    # print("dir", dir(module))
     app = apps.all_models['server']
+
     record_schemas = {}
+
     for content_type in app:
         if(content_type not in exclude):
-            model_class = getattr(module, content_type.capitalize())
-            name = content_type
-            record_schemas[name] = model_class
+            key = content_type.capitalize()
+            model_class = getattr(module, key)
+            record_schemas[key] = model_class
 
     fields = {}
     types = []
+
     for key, model_class in record_schemas.items():
+
         properties = {}
         properties["model"] = model_class
-
         meta = type("Meta", (), properties)
-        typeName = key + 'Type'
-        listName = model_class._meta.verbose_name_plural
-        t = type(typeName, (DjangoObjectType, ), {"Meta": meta})
-        types.append(t)
 
-        # fields[listName] = graphene.List(t)
+        typeName = key + 'Type'
+        djangoObjectType = type(typeName, (DjangoObjectType, ), {"Meta": meta})
+
+        types.append(djangoObjectType)
+
+    if expose_user:
+        types.append(UserType)
+
+    for class_type in types:
+        model_class = class_type._meta.model
+        key = model_class._meta.verbose_name
+        listName = model_class._meta.verbose_name_plural
+
         list_arguments = {}
         for field in model_class._meta.fields:
             if field.unique:
@@ -59,14 +77,11 @@ def create_schema(exclude=[]):
 
         resolve_list_name = 'resolve_%s' % listName
         fields[resolve_list_name] = make_resolver_list(listName, model_class)
-        fields[listName] = graphene.List(t)
+        fields[listName] = graphene.List(class_type)
 
-        fields[key] = graphene.Field(t, args=list_arguments)
+        fields[key] = graphene.Field(class_type, args=list_arguments)
         fields['resolve_%s' % key] = make_resolver_record(key, model_class)
 
     Query = type('Query', (graphene.ObjectType,), fields)
 
     return graphene.Schema(query=Query, types=types)
-
-
-schema = create_schema()
