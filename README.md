@@ -1,25 +1,20 @@
-Requirements 
-- Python3
-- Django >=2.0, <3.0
-- psycopg2-binary >=2.7, <3.0
-- django-cors-headers >=2.5.2, <3.0
-- graphene-django >=2.2.0, <3.0
 
-To test local, first install
+
+To learn more check out the following [examples](examples/):
+
+
+## Contributing
+
+
+After cloning this repo, ensure dependencies are installed by running:
 
 ```sh
-pip install -r requirements.txt
+pip install -e ".[test]"
 ```
 
-after run:
+After developing, the full test suite can be evaluated by running:
 
 ```sh
-python3 ./manage.py runserver
-```
-
-To mount with docker with postgres
-
-```sh
-docker-compose up
+py.test --cov-report html graphql_django --cov=graphql_django
 ```
 

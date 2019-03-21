@@ -1,7 +1,7 @@
 from django.test import TestCase
 from graphene.test import Client
-from graphql_django.server.models import Post
-from graphql_django.server.schema import create_schema
+from blog.server.models import Post
+from graphql_django.schema import create_schema
 
 
 class PostTestCase(TestCase):

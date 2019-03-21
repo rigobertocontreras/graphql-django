@@ -1,22 +1,12 @@
 from django.db import models
 from django.template.defaultfilters import slugify
-
 from django.contrib.auth.models import User
-
-
-class MyQuerySet(models.QuerySet):
-
-    def get_or_none(self, **kwargs):
-        try:
-            return self.get(**kwargs)
-        except self.model.DoesNotExist:
-            return None
 
 
 class Post(models.Model):
     objects = models.Manager()  # TODO: check manager
     title = models.CharField(max_length=100)
-    slug = models.SlugField(unique=True)
+    slug = models.SlugField(unique=True, blank=True)
     text = models.TextField()
     created_on = models.DateTimeField(auto_now_add=True)
     author = models.ForeignKey(User, models.SET_NULL, null=True)
@@ -24,7 +14,6 @@ class Post(models.Model):
     def __unicode__(self):
         return self.title
 
-    # @models.permalink
     def get_absolute_url(self):
         return ('blog_post_detail', (),
                 {
